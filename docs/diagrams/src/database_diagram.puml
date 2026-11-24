@@ -1,0 +1,52 @@
+@startuml
+hide circle
+skinparam linetype ortho
+
+entity "users.csv" as users {
+  * **users_id** : int <<PK>>
+  --
+  * users_name : str <<UN, NN>>
+  * password_hash : str <<NN>>
+  * role : str <<NN>>
+}
+
+entity "households.csv" as households {
+  * **home_id** : int <<PK>>
+  --
+}
+
+entity "user_households.csv" as user_households {
+  * **user_households_id** : int <<PK>>
+  --
+  * users_id : int <<FK, NN>>
+  * home_id : int <<FK, NN>>
+  ..
+  <<Constraint>> UN(users_id, home_id)
+}
+
+entity "appliances.csv" as appliances {
+  * **appliance_id** : int <<PK>>
+  --
+  * appliance_name : str <<UN, NN>>
+}
+
+entity "measurements.csv" as measurements {
+  * **measurement_id** : int <<PK>>
+  --
+  * home_id : int <<FK, NN>>
+  * appliance_id : int <<FK, NN>>
+  * energy_consumption : float <<NN>>
+  * time : str <<NN>>
+  * date : str <<NN>>
+  * outdoor_temperature : float <<NN>>
+  * season : str <<NN>>
+  * household_size : int <<NN>>
+}
+
+' Cardinality / Multiplicity (5-PAGE 13-20, clean UML notation without symbol overlap)
+users "1" -- "0..*" user_households : "assigned"
+households "1" -- "0..*" user_households : "linked"
+households "1" -- "1..*" measurements : "records"
+appliances "1" -- "1..*" measurements : "used in"
+
+@enduml

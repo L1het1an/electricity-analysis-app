@@ -1,0 +1,44 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "User\n(Standard Resident)" as User
+actor "Admin\n(System Administrator)" as Admin
+
+' Actor Generalization (3-PAGE 21): Admin inherits all User capabilities
+Admin --|> User
+
+rectangle "Household Electricity Consumption Analysis System" {
+  usecase "UC-01: Authenticate User\n(Login / Logout)" as UC01
+  usecase "UC-02: Ingest Raw Dataset\n(Load CSV)" as UC02
+  usecase "UC-03: View Aggregated Consumption\n(Day / Month / Year)" as UC03
+  usecase "UC-04: Compare Households\n(Up to 5 Homes)" as UC04
+  usecase "UC-05: Overlay Benchmark Curve\n(Global Average)" as UC05
+  usecase "UC-06: Filter Appliance Sources\n(Include / Exclude)" as UC06
+  usecase "UC-07: Predict Consumption with AI\n(Weather & House Features)" as UC07
+  usecase "UC-08: Export Summary Report\n(Monthly / Yearly Bonus)" as UC08
+}
+
+' Actor Associations
+User --> UC01
+User --> UC03
+User --> UC04
+User --> UC07
+User --> UC08
+
+Admin --> UC02
+
+' <<include>> relationships (3-PAGE 16): post-login actions require authentication
+UC02 ..> UC01 : <<include>>
+UC03 ..> UC01 : <<include>>
+UC04 ..> UC01 : <<include>>
+UC07 ..> UC01 : <<include>>
+UC08 ..> UC01 : <<include>>
+
+' <<extend>> relationships (3-PAGE 18): optional overlays and filters extending visualization
+UC05 ..> UC03 : <<extend>>
+UC06 ..> UC03 : <<extend>>
+UC05 ..> UC04 : <<extend>>
+UC06 ..> UC04 : <<extend>>
+
+@enduml

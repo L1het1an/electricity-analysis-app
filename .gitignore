@@ -1,0 +1,17 @@
+# Python environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Raw & generated data (keep folder structure only)
+data/raw/*.csv
+data/processed/*.csv
+
+# IDE, PlantUML temp output & OS
+out/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

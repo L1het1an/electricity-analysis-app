@@ -1,0 +1,116 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+
+package "Domain Models (src/models)" {
+  class User {
+    # users_id : int
+    + users_name : str
+    - __password_hash : str
+    + role : str
+    + home_ids : list[int]
+    --
+    + __init__(users_id: int, users_name: str, password_hash: str, role: str, home_ids: list[int])
+    + is_admin() : bool
+    + can_access_home(home_id: int) : bool
+    + verify_password(plain_password: str) : bool
+  }
+
+  class Household {
+    + home_id : int
+    --
+    + __init__(home_id: int)
+  }
+
+  class Appliance {
+    + appliance_id : int
+    + appliance_name : str
+    --
+    + __init__(appliance_id: int, appliance_name: str)
+  }
+
+  class Measurement {
+    + measurement_id : int
+    + home_id : int
+    + appliance_id : int
+    + energy_consumption : float
+    + time : str
+    + date : str
+    + outdoor_temperature : float
+    + season : str
+    + household_size : int
+    --
+    + __init__(measurement_id: int, home_id: int, appliance_id: int, energy_consumption: float, time: str, date: str, outdoor_temperature: float, season: str, household_size: int)
+  }
+}
+
+package "Data Access Layer (src/data)" {
+  class CSVDataRepository {
+    - _processed_dir : Path
+    --
+    + __init__(processed_dir: Path)
+    + ingest_raw_csv(raw_csv_path: Path) : dict
+    + load_users() : DataFrame
+    + load_households() : DataFrame
+    + load_user_households() : DataFrame
+    + load_appliances() : DataFrame
+    + load_measurements() : DataFrame
+    + validate_referential_integrity() : bool
+  }
+}
+
+package "Business & ML Services (src/services)" {
+  class AuthService {
+    - _repo : CSVDataRepository
+    --
+    + __init__(repo: CSVDataRepository)
+    + hash_password(plain_password: str) : str
+    + authenticate(username: str, password: str) : User | None
+    + get_authorized_homes(user: User) : list[int]
+    + ensure_home_access(user: User, home_ids: list[int]) : void
+  }
+
+  class AnalyticsService {
+    - _repo : CSVDataRepository
+    --
+    + __init__(repo: CSVDataRepository)
+    + filter_measurements(home_ids: list[int], appliance_ids: list[int], start_date: str, end_date: str) : DataFrame
+    + aggregate_consumption(df: DataFrame, granularity: str) : DataFrame
+    + compute_global_average(granularity: str, appliance_ids: list[int]) : DataFrame
+    + compute_kpis(df: DataFrame) : dict
+  }
+
+  class PredictionService {
+    - _repo : CSVDataRepository
+    - _ols_model : object
+    - _tree_model : object
+    --
+    + __init__(repo: CSVDataRepository)
+    - _clean_for_training(df: DataFrame) : DataFrame
+    + train_baselines() : dict
+    + predict(outdoor_temp: float, household_size: int, season: str, appliance_name: str, model_name: str) : float
+  }
+
+  class ReportExportService {
+    - _repo : CSVDataRepository
+    --
+    + __init__(repo: CSVDataRepository)
+    + build_summary_report(home_ids: list[int], period: str) : DataFrame
+    + export_to_csv_bytes(summary_df: DataFrame) : bytes
+  }
+}
+
+' Domain Relationships (4-PAGE 12-16)
+User "0..*" -- "0..*" Household : linked to
+Household "1" *-- "1..*" Measurement : owns (Composition)
+Appliance "1" -- "1..*" Measurement : measured in
+
+' Service Aggregation of shared Repository (4-PAGE 15)
+AuthService o-- "1" CSVDataRepository : uses
+AnalyticsService o-- "1" CSVDataRepository : uses
+PredictionService o-- "1" CSVDataRepository : uses
+ReportExportService o-- "1" CSVDataRepository : uses
+
+AuthService ..> User : returns
+
+@enduml
