@@ -1,0 +1,21 @@
+{
+  "01_login": "F:\\technicalProject\\team\\docs\\shots\\01_login_placeholder.png",
+  "02_invalid_credentials": true,
+  "02_shot": "F:\\technicalProject\\team\\docs\\shots\\02_login_error.png",
+  "03_signed_in_as_user1": true,
+  "03_scope_one_home": true,
+  "03_admin_nav_hidden": true,
+  "03_total_day": true,
+  "03_shot": "F:\\technicalProject\\team\\docs\\shots\\03_dashboard_day_user1.png",
+  "04_month_total": true,
+  "04_shot": "F:\\technicalProject\\team\\docs\\shots\\04_dashboard_month_user1.png",
+  "05_logged_out": true,
+  "06_three_homes": true,
+  "07_compare_households": true,
+  "07_shot": "F:\\technicalProject\\team\\docs\\shots\\07_dashboard_compare.png",
+  "08_filter_shot": "F:\\technicalProject\\team\\docs\\shots\\08_dashboard_filter.png",
+  "09_admin_nav": true,
+  "09_admin_scope": true,
+  "09_shot": "F:\\technicalProject\\team\\docs\\shots\\09_admin_dashboard.png",
+  "js_errors": []
+}
