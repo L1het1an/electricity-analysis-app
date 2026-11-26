@@ -23,7 +23,8 @@ class PredictionService:
         self._tree_model: object = None
         self._feature_columns: list[str] = None
         self._training_summary: dict = None
-        
+
+
     def _clean_for_training(self, df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         clean_df = df.copy()
         months = pd.to_datetime(clean_df["date"]).dt.month
@@ -36,6 +37,7 @@ class PredictionService:
         clean_df = clean_df[clean_df["outdoor_temperature"].between(-30.0, 50.0)]
         stats = {"raw_rows": len(df), "cleaned_rows": len(clean_df), "season_fixed": mismatches}
         return clean_df, stats
+
 
     def _prepare_features(self, clean_df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
         """Build numeric + one-hot encoded feature matrix and target series."""
@@ -50,6 +52,7 @@ class PredictionService:
         self._feature_columns = list(X.columns)
         return X, y
 
+
     def _evaluate_weather_only_ols(self, clean_df: pd.DataFrame) -> dict[str, float]:
         """Fit a weather + house-size only OLS to transparently measure weather signal."""
         X_w = sm.add_constant(
@@ -63,12 +66,14 @@ class PredictionService:
             "temp_p_value": float(ols_w.pvalues["outdoor_temperature"]),
         }
 
+
     def _metrics(self, y_true: pd.Series, y_hat: np.ndarray) -> dict[str, float]:
         return {
             "r2": float(r2_score(y_true, y_hat)),
             "mae": float(mean_absolute_error(y_true, y_hat)),
             "rmse": float(np.sqrt(mean_squared_error(y_true, y_hat))),
         }
+
 
     def train_baselines(self) -> dict:
         """Clean an in-memory copy, train OLS + HGB baselines, and return honest metrics."""
@@ -107,6 +112,7 @@ class PredictionService:
         }
         return self._training_summary
 
+
     @staticmethod
     def _validate_inputs(
         outdoor_temp: float,
@@ -124,6 +130,88 @@ class PredictionService:
             raise ValueError(f"Season must be one of {sorted(valid_seasons)}.")
         if not appliance_name or not isinstance(appliance_name, str):
             raise ValueError("A valid appliance name is required.")
+
+
+    def _encode_batch(self, df: pd.DataFrame) -> pd.DataFrame:
+        """One-hot encode a batch DataFrame aligned to training feature columns."""
+        feature_cols = ["outdoor_temperature", "household_size", "season", "appliance_name"]
+        X = pd.get_dummies(
+            df[feature_cols],
+            columns=["season", "appliance_name"],
+            drop_first=False,
+            dtype=float,
+        )
+        return X.reindex(columns=self._feature_columns, fill_value=0.0).astype(float)
+
+    
+    def get_home_prediction_curve(
+            self, home_id: int, granularity: str = "Monthly"
+    ) -> pd.DataFrame:
+        """Return actual vs. OLS vs. HGB consumption curves for a single household."""
+        if self._ols_model is None or self._tree_model is None or self._feature_columns is None:
+            self.train_baselines()
+
+        measurements = self._repo.load_measurements()
+        appliances = self._repo.load_appliances()
+        home_df = measurements[measurements["home_id"] == home_id].merge(
+            appliances[["appliance_id", "appliance_name"]], on="appliance_id", how="left"
+        )
+        if home_df.empty:
+            return pd.DataFrame(columns=["period", "actual_kwh", "ols_pred_kwh", "hgb_pred_kwh"])
+
+        clean_df, _ = self._clean_for_training(home_df)
+        X_batch = self._encode_batch(clean_df)
+        clean_df["ols_pred_kwh"] = np.maximum(
+            0.0, self._ols_model.predict(sm.add_constant(X_batch, has_constant="add"))
+        )
+        clean_df["hgb_pred_kwh"] = np.maximum(0.0, self._tree_model.predict(X_batch))
+        clean_df["period"] = (
+            clean_df["date"].astype(str).str.slice(0, 7)
+            if granularity == "Monthly"
+            else clean_df["date"].astype(str)
+        )
+        return (
+            clean_df.groupby("period", as_index=False)
+            .agg(
+                actual_kwh=("energy_consumption", "sum"),
+                ols_pred_kwh=("ols_pred_kwh", "sum"),
+                hgb_pred_kwh=("hgb_pred_kwh", "sum"),
+            )
+            .sort_values("period")
+            .reset_index(drop=True)
+        )
+
+
+    def get_temperature_comparison_curve(
+            self, household_size: int, season: str, appliance_name: str
+    ) -> pd.DataFrame:
+        """Compare OLS vs. HGB predicted kWh across -10°C to 40°C."""
+        if self._ols_model is None or self._tree_model is None or self._feature_columns is None:
+            self.train_baselines()
+
+        self._validate_inputs(0.0, household_size, season, appliance_name)
+        temps = np.linspace(-10.0, 40.0, 51)
+        sweep_df = pd.DataFrame(
+            {
+                "outdoor_temperature": temps,
+                "household_size": household_size,
+                "season": season,
+                "appliance_name": appliance_name,
+            }
+        )
+        X_batch = self._encode_batch(sweep_df)
+        ols_preds = np.maximum(
+            0.0, self._ols_model.predict(sm.add_constant(X_batch, has_constant="add"))
+        )
+        hgb_preds = np.maximum(0.0, self._tree_model.predict(X_batch))
+        return pd.DataFrame(
+            {
+                "outdoor_temperature": temps,
+                "ols_pred_kwh": ols_preds,
+                "hgb_pred_kwh": hgb_preds,
+            }
+        )
+
 
     def predict(
         self,

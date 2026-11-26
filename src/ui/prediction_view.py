@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 
+import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 
@@ -65,6 +66,55 @@ def _render_model_diagnostics(summary: dict) -> None:
     )
 
 
+def _render_curve_comparison(
+    prediction_service: PredictionService,
+    home_id: int,
+    household_size: int,
+    season: str,
+    appliance_name: str,
+) -> None:
+    """Render Matplotlib comparison curves for Statsmodels OLS vs. Scikit-learn HGB."""
+    st.subheader("Dual-Model Prediction Curve Comparison (Bonus)")
+    mode = st.radio(
+        "Comparison Mode",
+        ["Household Time-Series (Actual vs. OLS vs. HGB)", "Temperature Sweep (-10°C to 40°C)"],
+        horizontal=True,
+    )
+
+    fig, ax = plt.subplots(figsize=(10, 4))
+    if mode.startswith("Household"):
+        granularity = st.radio("Curve Granularity", ["Monthly", "Daily"], horizontal=True)
+        curve_df = prediction_service.get_home_prediction_curve(home_id, granularity=granularity)
+        if curve_df.empty:
+            st.info(f"No records available for Home #{home_id}.")
+            plt.close(fig)
+            return
+        ax.plot(curve_df["period"], curve_df["actual_kwh"], label="Actual (kWh)", color="#333333", linewidth=2.0)
+        ax.plot(curve_df["period"], curve_df["ols_pred_kwh"], label="Statsmodels OLS", color="#1f77b4", linestyle="--", linewidth=1.8)
+        ax.plot(curve_df["period"], curve_df["hgb_pred_kwh"], label="Scikit-learn HGB", color="#ff7f0e", linestyle=":", linewidth=2.0)
+        ax.set_title(f"Home #{home_id} — Actual vs. Dual-Model Predictions ({granularity})")
+        ax.set_xlabel("Period")
+        ax.set_ylabel("Energy Consumption (kWh)")
+        step = max(1, len(curve_df) // 12)
+        ax.set_xticks(range(0, len(curve_df), step))
+        ax.set_xticklabels(curve_df["period"].iloc[::step], rotation=45, ha="right")
+    else:
+        sweep_df = prediction_service.get_temperature_comparison_curve(
+            household_size=household_size, season=season, appliance_name=appliance_name
+        )
+        ax.plot(sweep_df["outdoor_temperature"], sweep_df["ols_pred_kwh"], label="Statsmodels OLS", color="#1f77b4", linewidth=2.0)
+        ax.plot(sweep_df["outdoor_temperature"], sweep_df["hgb_pred_kwh"], label="Scikit-learn HGB", color="#ff7f0e", linestyle="--", linewidth=2.0)
+        ax.set_title(f"Temperature Response Curve ({appliance_name}, {season}, Size={household_size})")
+        ax.set_xlabel("Outdoor Temperature (°C)")
+        ax.set_ylabel("Predicted Consumption (kWh)")
+
+    ax.grid(True, alpha=0.3)
+    ax.legend()
+    fig.tight_layout()
+    st.pyplot(fig)
+    plt.close(fig)
+
+
 def render_prediction_view(
     prediction_service: PredictionService,
     user: User,
@@ -108,6 +158,14 @@ def render_prediction_view(
         except ValueError as exc:
             st.error(f"Invalid input: {exc}")
 
+    st.divider()
+    _render_curve_comparison(
+        prediction_service=prediction_service,
+        home_id=int(selected_home),
+        household_size=int(household_size),
+        season=season,
+        appliance_name=appliance_name,
+    )
     st.divider()
     _render_model_diagnostics(summary)
 
