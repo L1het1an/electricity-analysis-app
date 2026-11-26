@@ -99,3 +99,32 @@ def test_predict_invalid_inputs_raise_value_error(
 
     with pytest.raises(ValueError):
         svc.predict(temp, size, season, "Fridge", model_name)
+
+
+def test_home_prediction_curve_monthly_and_empty(seeded_repo: CSVDataRepository) -> None:
+    """[AI-Bonus] Verify dual-model comparison curves."""
+    svc = PredictionService(seeded_repo)
+    curve = svc.get_home_prediction_curve(1, granularity="Monthly")
+    empty_curve = svc.get_home_prediction_curve(9999)
+
+    assert not curve.empty
+    assert list(curve.columns) == ["period", "actual_kwh", "ols_pred_kwh", "hgb_pred_kwh"]
+    assert (curve["ols_pred_kwh"] >= 0).all() and (curve["hgb_pred_kwh"] >= 0).all()
+    assert empty_curve.empty
+
+def test_temperature_comparison_curve_shape_and_validation(seeded_repo: CSVDataRepository) -> None:
+    """[AI-Bonus] Verify dual-model comparison curves."""
+    svc = PredictionService(seeded_repo)
+    sweep = svc.get_temperature_comparison_curve(
+        household_size=3, season="Summer", appliance_name="Air Conditioning"
+    )   
+
+    assert len(sweep) == 51
+    assert list(sweep.columns) == ["outdoor_temperature", "ols_pred_kwh", "hgb_pred_kwh"]
+    assert sweep["outdoor_temperature"].iloc[0] == -10.0 and sweep["outdoor_temperature"].iloc[-1] == 40.0
+    assert (sweep["ols_pred_kwh"] >= 0).all() and (sweep["hgb_pred_kwh"] >= 0).all()
+
+    with pytest.raises(ValueError):
+        svc.get_temperature_comparison_curve(
+            household_size=0, season="Invalid", appliance_name=""
+        )
