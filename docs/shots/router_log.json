@@ -1,0 +1,19 @@
+{
+  "sidebar_has_dashboard": true,
+  "sidebar_has_prediction": true,
+  "sidebar_has_export": true,
+  "sidebar_hides_admin_for_user": true,
+  "prediction_header": true,
+  "prediction_metric": true,
+  "prediction_baselines": true,
+  "prediction_shot": "F:\\technicalProject\\team\\docs\\shots\\10_prediction_user1.png",
+  "prediction_diagnostics_shot": "F:\\technicalProject\\team\\docs\\shots\\11_prediction_diagnostics.png",
+  "export_header": true,
+  "export_table": true,
+  "export_shot": "F:\\technicalProject\\team\\docs\\shots\\12_export_user1.png",
+  "dashboard_total": true,
+  "dashboard_shot": "F:\\technicalProject\\team\\docs\\shots\\03_dashboard_day_user1.png",
+  "admin_has_management": true,
+  "admin_scope": true,
+  "js_errors": []
+}

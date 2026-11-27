@@ -15,3 +15,10 @@ out/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local document build artefacts (the .docx deliverables are committed)
+output/*.pdf
+output/pages/
+output/pages2/
+output/pages3/
+output/pages*/
