@@ -21,3 +21,4 @@ output/*.pdf
 output/pages/
 output/pages2/
 output/pages3/
+output/pages*/

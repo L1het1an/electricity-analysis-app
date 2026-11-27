@@ -12,11 +12,17 @@ import streamlit as st
 from src.data.repository import CSVDataRepository
 from src.models import User
 from src.services.analytics_service import AnalyticsService
+from src.services.export_service import ReportExportService
+from src.services.prediction_service import PredictionService
 from src.ui.dashboard_view import render_dashboard_view
+from src.ui.export_view import render_export_view
+from src.ui.prediction_view import render_prediction_view
 
 PROCESSED_DIR = "data/processed"
 
 DASHBOARD_SCREEN = "Dashboard"
+PREDICTION_SCREEN = "AI Prediction"
+EXPORT_SCREEN = "Export Report"
 ADMIN_SCREEN = "Data management"
 
 
@@ -40,12 +46,19 @@ def main() -> None:
         return
 
     analytics = AnalyticsService(repository)
+    prediction = PredictionService(repository)
+    export = ReportExportService(repository)
     screen = _render_sidebar(user, analytics)
 
+    visible_homes = analytics.authorize(user)
     if screen == ADMIN_SCREEN:
         _render_admin(repository, user)
+    elif screen == PREDICTION_SCREEN:
+        render_prediction_view(prediction, user, visible_homes)
+    elif screen == EXPORT_SCREEN:
+        render_export_view(export, user, visible_homes)
     else:
-        render_dashboard_view(analytics, user, analytics.authorize(user))
+        render_dashboard_view(analytics, user, visible_homes)
 
 
 # ---------------------------------------------------------------------- #
@@ -147,7 +160,7 @@ def _render_admin(repository: CSVDataRepository, user: User) -> None:
 # ---------------------------------------------------------------------- #
 def _render_sidebar(user: User, analytics: AnalyticsService) -> str:
     """Draw the identity block and the navigation, and return the chosen screen."""
-    labels = [DASHBOARD_SCREEN]
+    labels = [DASHBOARD_SCREEN, PREDICTION_SCREEN, EXPORT_SCREEN]
     if user.is_admin():
         labels.append(ADMIN_SCREEN)
     with st.sidebar:

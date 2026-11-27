@@ -370,7 +370,40 @@ def build() -> Path:
                    "UC-05 芦include禄s the aggregation of UC-03, and UC-08 "
                    "芦extend禄s the report with the per-resident figures.", space_after=6)
     picture(document, ROOT / "docs" / "diagrams" / "use_case_diagram.png", 16.4,
-            "Figure 1 – Use case diagram of the analysis console.")
+            "Figure 1 \u2013 Use case diagram of the analysis console.")
+
+    heading(document, "3.1 System actors", 2)
+    bullets(document, [
+        ("User (standard resident)", "an authenticated resident linked to one or more "
+         "households. The account can view, compare, predict and export its own "
+         "households only, plus the anonymised all-household benchmark curve."),
+        ("Admin (system administrator)", "inherits every User capability and additionally "
+         "reaches all 500 households and the raw dataset ingestion."),
+    ])
+
+    heading(document, "3.2 Role-based access control", 2)
+    para(document, "The matrix below is the normative statement of who may call what. "
+                   "Every row is enforced in the service layer, never in the view, so a "
+                   "second UI cannot bypass it.", space_after=6)
+    table(document, ("Feature or use case", "User", "Admin", "Access rule"),
+          [("Login / logout (UC-01)", "Allowed", "Allowed",
+            "An authenticated session is required for every other row"),
+           ("Ingest raw dataset (UC-02)", "Denied", "Allowed",
+            "Admin only; the screen is hidden and the service refuses"),
+           ("View consumption (UC-03)", "Assigned homes", "All 500 homes",
+            "An unassigned home_id is rejected by the service"),
+           ("Compare households (UC-04)", "Assigned homes", "Any 2 to 5 homes",
+            "Hard cap of five simultaneous households"),
+           ("Overlay benchmark (UC-05)", "Allowed", "Allowed",
+            "Anonymised global mean; exposes no individual record"),
+           ("Filter appliances (UC-06)", "Allowed", "Allowed",
+            "Applied dynamically in memory, never on disk"),
+           ("AI prediction (UC-07)", "Assigned homes", "All 500 homes",
+            "Cleaning is isolated to the in-memory prediction copy"),
+           ("Export summary (UC-08)", "Assigned homes", "All or any homes",
+            "Restricted to authorised households")],
+          widths=(5.2, 3.4, 3.4, 5.0))
+
     table(document, ("Use case", "Actor", "Related feature"),
           [("UC-01 Authenticate", "User, Admin", "FR-01"),
            ("UC-02 Ingest raw dataset", "Admin", "FR-02"),
@@ -401,11 +434,12 @@ def build() -> Path:
 
     # ------------------------------------------------------ 5 interface ----
     heading(document, "5. Interface design")
-    para(document, "The application has three user-facing screens plus an "
-                   "administration screen. The screenshots below are the real "
-                   "interface, captured from the running application with an "
-                   "automated browser session, so they double as evidence for the "
-                   "verification plan.", space_after=6)
+    para(document, "The application has four screens: the sign-in form, the "
+                   "consumption dashboard, the AI prediction screen and the export "
+                   "screen, plus an administration screen reserved for the Admin role. "
+                   "The screenshots below are the real interface, captured from the "
+                   "running application with an automated browser session, so they "
+                   "double as evidence for the verification plan.", space_after=6)
     picture(document, SHOTS / "02_login_error.png", 16.4,
             "Figure 2 – Login screen (UC-01). An invalid password is refused with a "
             "single generic message so the form never reveals whether the account exists.")
